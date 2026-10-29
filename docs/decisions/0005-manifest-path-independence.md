@@ -1,9 +1,11 @@
-# 0005 — The manifest's `source` field leaks the inbox path
+# 0005 — The manifest's `source` field leaked the inbox path
+
+**Status:** fixed. `source` is now stored relative to the inbox root.
 
 ## What was wrong
 
-`pipeline.ingest_partition` writes the inbox path exactly as supplied into `_manifest.json`
-under `source`. The same rows, contract and requested date can therefore produce different
+`pipeline.ingest_partition` wrote the inbox path exactly as supplied into `_manifest.json`
+under `source`. The same rows, contract and requested date could therefore produce different
 manifests depending on how the path was spelled.
 
 ## Quantified impact
@@ -24,25 +26,27 @@ The CI byte-identity check does not catch this because both runs use the same re
 
 ## Root cause
 
-`source` is stored as `source.as_posix()` on the `Path` handed to `ingest_partition`. Nothing
-normalizes it against a configured root, and the manifest has no notion of a root.
+`source` was stored as `source.as_posix()` on the `Path` handed to `ingest_partition`. Nothing
+normalized it against a configured root, and the manifest had no notion of a root.
 
 ## Fix
 
-Store the path relative to a configured inbox root, or drop `source` entirely and let the
-orchestrator record provenance. The first keeps the field useful for debugging; the second is
-consistent with the stated separation between determinism and provenance.
+Store the path relative to the inbox root. `ingest/pipeline.py` now writes
+`source.relative_to(inbox).as_posix()`, so
+`customers/event_date=2026-01-01/customers.parquet` is recorded regardless of how `--inbox` was
+spelled. The field stays useful for debugging, and the root itself no longer appears in the
+output.
 
 ## Prevention
 
-Add a test that ingests the same partition through a relative and an absolute inbox into two
-data roots and compares the manifests byte for byte. The test must fail before the fix and pass
-after. Until then, the limitation is recorded in `docs/components/writer.md` and
-`docs/theory_of_operation.md` §7 rather than left implicit.
+`tests/test_idempotency.py::test_manifest_source_is_relative_to_the_inbox` ingests the customer
+snapshot through a relative and an absolute inbox into two data roots and asserts the manifests
+are byte-identical. It fails against the old behaviour.
 
 ## Related
 
 - `ingest/pipeline.py` — manifest construction
 - `ingest/writer.py` — `write_json_atomic`
-- `docs/components/writer.md` — Current Limitations
+- `tests/test_idempotency.py` — regression test
+- `docs/components/writer.md` — provenance decision
 - `docs/theory_of_operation.md` §7

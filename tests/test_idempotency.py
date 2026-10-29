@@ -2,10 +2,21 @@
 
 from __future__ import annotations
 
+import json
+import os
+from pathlib import Path
+
 import polars as pl
 
 from ingest.writer import fingerprint
-from tests.helpers import TX_DAY, ingest_baseline, partition
+from tests.helpers import (
+    FIXTURE_INBOX,
+    SNAPSHOT,
+    TX_DAY,
+    ingest,
+    ingest_baseline,
+    partition,
+)
 
 
 def _snapshot(data) -> tuple[bytes, bytes]:
@@ -45,3 +56,23 @@ def test_manifest_contains_no_wall_clock_time(contracts, inbox, data):
     # appear in it. Provenance belongs to the orchestrator, not the data.
     assert b"ingested_at" not in manifest
     assert b"2026-10" not in manifest
+
+
+def test_manifest_source_is_relative_to_the_inbox(contracts, data, tmp_path):
+    relative_inbox = Path(os.path.relpath(FIXTURE_INBOX, Path.cwd()))
+    absolute_data = tmp_path / "absolute-data"
+
+    ingest(contracts, "customers", SNAPSHOT, relative_inbox, data)
+    ingest(contracts, "customers", SNAPSHOT, FIXTURE_INBOX.resolve(), absolute_data)
+
+    relative_manifest = (
+        partition(data, "customers", SNAPSHOT) / "_manifest.json"
+    ).read_text()
+    absolute_manifest = (
+        partition(absolute_data, "customers", SNAPSHOT) / "_manifest.json"
+    ).read_text()
+
+    assert relative_manifest == absolute_manifest
+    assert json.loads(relative_manifest)["source"] == (
+        "customers/event_date=2026-01-01/customers.parquet"
+    )

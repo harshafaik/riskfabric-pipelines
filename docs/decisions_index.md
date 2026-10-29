@@ -21,7 +21,7 @@ fix and the prevention.
 
 ## Incident records
 
-- [0005 — The manifest's `source` field leaks the inbox path](decisions/0005-manifest-path-independence.md)
-  — a hole in the determinism invariant.
+- [0005 — The manifest's `source` field leaked the inbox path](decisions/0005-manifest-path-independence.md)
+  — a determinism hole, fixed and guarded by a regression test.
 - [0006 — The fixture drifted from scrip schema v1 to v2](decisions/0006-fixture-schema-drift.md)
   — the stale fixture, the wrong row count and the schema-version guard.

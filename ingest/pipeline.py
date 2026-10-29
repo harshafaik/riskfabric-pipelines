@@ -114,7 +114,7 @@ def ingest_partition(
         "contract_version": contract.version,
         "partition": partition.isoformat(),
         "grain": contract.grain,
-        "source": source.as_posix(),
+        "source": source.relative_to(inbox).as_posix(),
         "rows_in": frame.height,
         "rows_committed": accepted.height,
         "rows_rejected": result.rejected.height,

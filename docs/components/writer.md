@@ -38,8 +38,14 @@ what makes the idempotency test meaningful: it compares data, not Parquet metada
 
 **The manifest contains no wall clock.** Keys are sorted, indentation is fixed and the file ends
 with a newline. A rerun of the same partition over the same input therefore produces identical
-bytes; the CI step asserts this over all 62 output files. Provenance belongs to the orchestrator,
-determinism belongs to the data.
+bytes; the CI step asserts this over all 62 output files. Run-time provenance belongs to the
+orchestrator; determinism belongs to the data.
+
+**Provenance is recorded relative to the inbox.** The manifest's `source` field stores the
+source path relative to the inbox root, not as supplied. The same partition ingested through a
+relative or an absolute `--inbox` therefore produces identical manifest bytes. The incident that
+prompted this is recorded in
+[0005](../decisions/0005-manifest-path-independence.md).
 
 **Reconciliation reads the file back.** After writing, `reconcile` compares the committed row
 count, the column list and the fingerprint against the manifest. A partial or corrupted write
@@ -49,12 +55,6 @@ fails the run with exit code `4` instead of being reported as success.
 manifest it builds is also what Dagster emits as materialization metadata.
 
 ## Current Limitations
-
-The manifest's `source` field stores the inbox path exactly as supplied. The same partition
-ingested with `--inbox fixtures/inbox` and with an absolute path produces different manifests,
-which breaks byte-identity across roots. Storing a path relative to a configured root, or
-dropping the field, is the fix; see
-[0005](../decisions/0005-manifest-path-independence.md).
 
 There is no lock. Two processes writing the same partition can interleave their temp files and
 replacements; the last `os.replace` wins and the manifest may describe the other writer's rows.

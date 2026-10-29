@@ -64,12 +64,16 @@ count, column list and fingerprint. A partial or corrupted write fails with exit
 rather than reporting success. This is the check that turns "the write returned" into "the data
 landed".
 
-## 7. Determinism has a boundary
+## 7. Determinism is anchored to the inbox
 
-The data is deterministic; the manifest is deterministic only while the inbox path is passed
-the same way. The `source` field stores the path as supplied, so a relative and an absolute
-inbox produce different manifests for identical rows. This is a known hole in the invariant and
-is recorded in [0005](decisions/0005-manifest-path-independence.md) with the fix direction.
+The manifest's `source` field stores the source path relative to the inbox root, so the same
+partition ingested through a relative or an absolute `--inbox` produces identical bytes. An
+earlier version stored the path as supplied, which leaked the invocation into the manifest;
+[0005](decisions/0005-manifest-path-independence.md) records the incident and the regression
+test.
+
+The remaining boundary is the contract and the source bytes. The path used to reach them no
+longer appears in the output.
 
 ## 8. Orchestration adds no correctness
 
