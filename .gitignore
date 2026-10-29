@@ -19,3 +19,6 @@ dbt_packages/
 
 # Local agent tooling metadata.
 .commandcode/
+
+# Dagster local instance.
+.dagster/

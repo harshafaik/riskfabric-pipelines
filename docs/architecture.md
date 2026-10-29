@@ -38,7 +38,15 @@ referential integrity and accepted values; two singular tests guard the
 negative-interval and over-flagging bug classes. Facts join dimensions on natural
 keys; consumers doing point-in-time analysis use the SCD2 validity range.
 
-Orchestration is still absent and is the next stage.
+## Orchestration
+
+`orchestration/definitions.py` maps each `(feed, event_date)` to a Dagster
+partition. `customers_bronze`, `transactions_bronze` and `star_schema` share the
+daily partition definition and a retry policy. The ingest manifest becomes
+materialization metadata, and a freshness asset check compares the newest bronze
+partition with the newest delivered one. The schedule is built from the
+partitioned job, so each day is independently re-runnable and a single-partition
+backfill is the idempotency demonstration.
 
 ## Invariants
 

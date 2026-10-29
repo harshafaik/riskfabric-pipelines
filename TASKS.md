@@ -1,7 +1,8 @@
 # TASKS — finish this repo, then stop
 
-Status (2026-10-29): ingestion and the SQL layer are done; the repo is published and CI is
-green. What remains is one missing demonstration and orchestration.
+Status (2026-10-29): ingestion, the SQL layer, the late-arrival demo and Dagster
+orchestration are done; the repo is published and CI is green. What remains is item 6
+(the README cross-links).
 
 **Definition of done.** When all six items below are true, this repo is finished as a
 portfolio piece. Do not keep growing it after that; the next marginal hour belongs to
