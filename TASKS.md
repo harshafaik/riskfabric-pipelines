@@ -1,7 +1,7 @@
 # TASKS — finish this repo, then stop
 
-Status: the ingestion layer is done and good. What remains is not more ingestion — it is
-publication, one missing demonstration, and the SQL layer that this repo exists to justify.
+Status (2026-10-29): ingestion and the SQL layer are done; the repo is published and CI is
+green. What remains is one missing demonstration and orchestration.
 
 **Definition of done.** When all six items below are true, this repo is finished as a
 portfolio piece. Do not keep growing it after that; the next marginal hour belongs to
