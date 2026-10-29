@@ -95,3 +95,11 @@ instead of quarantining every row as an orphan.
 - Quarantine is append-by-overwrite per partition: a clean rerun removes the
   previous `rejected.parquet` for that day. Historical reject rates therefore
   require the orchestration layer to record run metadata.
+
+## Further reading
+
+- [Theory of operation](theory_of_operation.md) — the model behind these invariants.
+- [Components](components/index.md) — one document per module, with field tables and limitations.
+- [Decisions](decisions_index.md) — choices, incidents and rejected alternatives.
+- [Performance](performance.md) — measured timings and query latencies.
+- [Failure modes](failure-modes.md) — detection, effect and exit code per failure.
