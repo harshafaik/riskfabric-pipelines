@@ -29,4 +29,4 @@ jobs:
           echo "all files byte-identical on rerun"
 
       - name: Transform and test (dbt)
-        run: dbt build --profiles-dir . --vars '{bronze_root: /tmp/data/bronze}'
+        run: "dbt build --profiles-dir . --vars '{bronze_root: /tmp/data/bronze}'"
