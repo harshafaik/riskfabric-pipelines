@@ -1,0 +1,59 @@
+feed: transactions
+version: 1
+grain: one row per transaction_id
+description: Card and UPI transactions emitted daily by scrip.
+owner: data-platform
+
+arrival:
+  path: "transactions/event_date={event_date}/transactions.parquet"
+  required: true
+  min_rows: 1
+
+partition:
+  key: event_date
+  from: column
+  column: timestamp
+
+primary_key: [transaction_id]
+
+columns:
+  transaction_id:      { type: string,    nullable: false }
+  card_id:             { type: string,    nullable: false }
+  account_id:          { type: string,    nullable: false }
+  customer_id:         { type: string,    nullable: false }
+  merchant_id:         { type: string,    nullable: false }
+  merchant_name:       { type: string,    nullable: false }
+  merchant_category:   { type: string,    nullable: false }
+  mcc:                 { type: string,    nullable: false, pattern: "^[0-9]{4}$" }
+  merchant_country:    { type: string,    nullable: false, pattern: "^[A-Z]{2}$" }
+  amount:              { type: float64,   nullable: false, min: 0.0, max: 1000000.0 }
+  currency:            { type: string,    nullable: false, allowed: ["INR"] }
+  timestamp:           { type: timestamp, nullable: false }
+  transaction_channel:
+    type: string
+    nullable: false
+    allowed: ["upi", "cards", "online", "mobile_wallets", "mobile_banking"]
+  card_present:        { type: boolean,   nullable: false }
+  user_agent:          { type: string,    nullable: false }
+  ip_address:          { type: string,    nullable: false }
+  status:              { type: string,    nullable: false, allowed: ["Success", "Failed"] }
+  auth_status:         { type: string,    nullable: false, allowed: ["approved", "declined"] }
+  failure_reason:      { type: string,    nullable: true }
+  is_fraud:            { type: boolean,   nullable: false }
+  chargeback:          { type: boolean,   nullable: false }
+  chargeback_days:     { type: int32,     nullable: true, min: 0 }
+  location_lat:        { type: float64,   nullable: false, min: -90.0, max: 90.0 }
+  location_long:       { type: float64,   nullable: false, min: -180.0, max: 180.0 }
+  h3_r7:               { type: string,    nullable: false, pattern: "^[0-9a-f]{15}$" }
+
+references:
+  - column: customer_id
+    feed: customers
+    target: customer_id
+
+evolution:
+  policy: additive_only
+  rules:
+    - New columns must be nullable and must not reuse an existing name.
+    - Removing or renaming a column requires a new contract version.
+    - Widening a type requires a new contract version.

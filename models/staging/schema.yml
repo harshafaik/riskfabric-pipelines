@@ -1,0 +1,34 @@
+version: 2
+
+models:
+  - name: stg_transactions
+    description: >-
+      Typed, renamed view over bronze transactions. Grain: one row per
+      transaction_id.
+    meta:
+      grain: one row per transaction_id
+    columns:
+      - name: transaction_id
+        tests: [not_null]
+      - name: customer_id
+        tests: [not_null]
+      - name: card_id
+        tests: [not_null]
+      - name: merchant_id
+        tests: [not_null]
+      - name: event_date
+        tests: [not_null]
+      - name: transaction_ts
+        tests: [not_null]
+
+  - name: stg_customers
+    description: >-
+      Typed, renamed view over bronze customer snapshots. Grain: one row per
+      customer_id per snapshot_date.
+    meta:
+      grain: one row per customer_id per snapshot_date
+    columns:
+      - name: customer_id
+        tests: [not_null]
+      - name: snapshot_date
+        tests: [not_null]

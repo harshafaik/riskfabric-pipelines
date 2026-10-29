@@ -1,0 +1,21 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+
+# Pipeline output. Fixtures are committed under fixtures/inbox/.
+data/
+
+# dbt artifacts and local DuckDB warehouses.
+target/
+logs/
+dbt_packages/
+*.duckdb
+.user.yml
+
+# Local agent tooling metadata.
+.commandcode/

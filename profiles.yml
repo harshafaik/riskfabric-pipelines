@@ -1,0 +1,7 @@
+riskfabric:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('RFP_DUCKDB', 'data/riskfabric.duckdb') }}"
+      threads: 4

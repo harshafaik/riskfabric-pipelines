@@ -1,0 +1,32 @@
+select
+    transaction_id,
+    card_id,
+    account_id,
+    customer_id,
+    merchant_id,
+    merchant_name,
+    merchant_category,
+    mcc,
+    merchant_country,
+    amount,
+    currency,
+    "timestamp" as transaction_ts,
+    transaction_channel,
+    card_present,
+    user_agent,
+    ip_address,
+    status,
+    auth_status,
+    failure_reason,
+    is_fraud,
+    chargeback,
+    chargeback_days,
+    location_lat,
+    location_long,
+    h3_r7,
+    event_date
+from read_parquet(
+    '{{ var("bronze_root") }}/transactions/event_date=*/*.parquet',
+    union_by_name = true,
+    hive_partitioning = false
+)

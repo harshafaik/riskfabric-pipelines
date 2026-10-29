@@ -1,0 +1,47 @@
+feed: customers
+version: 1
+grain: one row per customer_id, as of the snapshot date
+description: Customer dimension snapshot. Emitted periodically rather than daily.
+owner: data-platform
+
+arrival:
+  path: "customers/event_date={event_date}/customers.parquet"
+  required: false
+  min_rows: 1
+
+partition:
+  key: event_date
+  from: requested
+
+primary_key: [customer_id]
+
+columns:
+  customer_id:         { type: string,  nullable: false }
+  name:                { type: string,  nullable: false }
+  age:                 { type: uint32,  nullable: false, min: 18, max: 100 }
+  email:               { type: string,  nullable: false, pattern: "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" }
+  state:               { type: string,  nullable: false }
+  location:            { type: string,  nullable: false }
+  location_type:       { type: string,  nullable: false }
+  home_latitude:       { type: float64, nullable: false, min: -90.0, max: 90.0 }
+  home_longitude:      { type: float64, nullable: false, min: -180.0, max: 180.0 }
+  home_h3r5:           { type: string,  nullable: false }
+  home_h3r7:           { type: string,  nullable: false, pattern: "^[0-9a-f]{15}$" }
+  credit_score:        { type: uint32,  nullable: false, min: 0, max: 900 }
+  monthly_spend:       { type: float64, nullable: false, min: 0.0 }
+  customer_risk_score: { type: float64, nullable: false, min: 0.0, max: 1.0 }
+  is_fraud:            { type: boolean, nullable: false }
+  primary_ua:          { type: string,  nullable: false }
+  secondary_ua:        { type: string,  nullable: true }
+  isp:                 { type: string,  nullable: false }
+  ip_subnet:           { type: string,  nullable: false }
+  registration_date:   { type: date,    nullable: false }
+
+references: []
+
+evolution:
+  policy: additive_only
+  rules:
+    - New columns must be nullable and must not reuse an existing name.
+    - Removing or renaming a column requires a new contract version.
+    - Widening a type requires a new contract version.

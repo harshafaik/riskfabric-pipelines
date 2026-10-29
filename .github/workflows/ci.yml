@@ -1,0 +1,32 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: pip install -e ".[dev,transform]"
+
+      - name: Unit and integration tests
+        run: pytest
+
+      - name: Full feed is repeatable
+        run: |
+          python -m ingest run --feed all --from 2026-01-01 --to 2026-01-30 --data /tmp/data
+          find /tmp/data -type f | sort | xargs sha256sum > /tmp/first.sha
+          python -m ingest run --feed all --from 2026-01-01 --to 2026-01-30 --data /tmp/data
+          sha256sum -c /tmp/first.sha --quiet
+          echo "all files byte-identical on rerun"
+
+      - name: Transform and test (dbt)
+        run: dbt build --profiles-dir . --vars '{bronze_root: /tmp/data/bronze}'

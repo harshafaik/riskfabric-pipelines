@@ -1,0 +1,117 @@
+version: 2
+
+models:
+  - name: dim_customer
+    description: >-
+      Customer dimension with slowly-changing state and credit band. Grain: one
+      row per customer_id per validity period (SCD2), keyed by customer_sk.
+    meta:
+      grain: one row per customer_id per validity period
+    columns:
+      - name: customer_sk
+        tests: [unique, not_null]
+      - name: customer_id
+        tests: [not_null]
+      - name: credit_band
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["subprime", "near_prime", "prime", "super_prime"]
+      - name: valid_from
+        tests: [not_null]
+      - name: valid_to
+        tests: [not_null]
+
+  - name: dim_card
+    description: >-
+      Card dimension derived from observed transactions. Grain: one row per
+      card_id.
+    meta:
+      grain: one row per card_id
+    columns:
+      - name: card_sk
+        tests: [unique, not_null]
+      - name: card_id
+        tests: [unique, not_null]
+      - name: customer_id
+        tests: [not_null]
+
+  - name: dim_merchant
+    description: >-
+      Merchant dimension derived from observed transactions. Grain: one row per
+      merchant_id.
+    meta:
+      grain: one row per merchant_id
+    columns:
+      - name: merchant_sk
+        tests: [unique, not_null]
+      - name: merchant_id
+        tests: [unique, not_null]
+      - name: merchant_country
+        tests: [not_null]
+
+  - name: dim_date
+    description: >-
+      Date spine covering the observed transaction window. Grain: one row per
+      calendar day.
+    meta:
+      grain: one row per calendar day
+    columns:
+      - name: date_key
+        tests: [unique, not_null]
+      - name: date_day
+        tests: [unique, not_null]
+
+  - name: fact_transaction
+    description: >-
+      Transaction fact at the finest grain available. Grain: one row per
+      transaction_id. Incremental with a three-day lookback so late corrections
+      replace affected rows.
+    meta:
+      grain: one row per transaction_id
+    columns:
+      - name: transaction_sk
+        tests: [unique, not_null]
+      - name: transaction_id
+        tests: [unique, not_null]
+      - name: customer_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customer')
+                field: customer_id
+      - name: card_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_card')
+                field: card_id
+      - name: merchant_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_merchant')
+                field: merchant_id
+      - name: event_date
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_day
+      - name: amount
+        tests: [not_null]
+      - name: transaction_channel
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["upi", "cards", "online", "mobile_wallets", "mobile_banking"]
+      - name: currency
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["INR"]

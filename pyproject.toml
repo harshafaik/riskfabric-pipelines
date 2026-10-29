@@ -1,0 +1,28 @@
+[project]
+name = "riskfabric-pipelines"
+version = "0.1.0"
+description = "Contract-validated ingestion and analytical models for a synthetic fraud feed"
+requires-python = ">=3.11"
+dependencies = [
+    "polars>=1.20,<3",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+transform = ["dbt-duckdb>=1.11,<2"]
+
+[project.scripts]
+rfp = "ingest.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["ingest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
