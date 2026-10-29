@@ -29,4 +29,6 @@ jobs:
           echo "all files byte-identical on rerun"
 
       - name: Transform and test (dbt)
+        env:
+          RFP_DUCKDB: /tmp/riskfabric.duckdb
         run: "dbt build --profiles-dir . --vars '{bronze_root: /tmp/data/bronze}'"
