@@ -25,8 +25,8 @@ scrip  ──dataset v1──▶  riskfabric-pipelines  ──analytical tables�
 | [`RiskFabric`](https://github.com/harshafaik/RiskFabric) (archived) | Original end-to-end monolith |
 
 [`nsrdb`](https://github.com/harshafaik/nsrdb) carries the scale and distribution story.
-`scrip` is the seeded Rust generator that produced `fixtures/inbox`; its provenance is
-recorded in [`fixtures/README.md`](fixtures/README.md#provenance).
+[`scrip`](https://github.com/harshafaik/scrip) is the seeded Rust generator that produced
+`fixtures/inbox`; its provenance is recorded in [`fixtures/README.md`](fixtures/README.md#provenance).
 
 It does not train models. It ends at curated, validated tables.
 
