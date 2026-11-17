@@ -17,7 +17,8 @@ bronze/<feed>/event_date=YYYY-MM-DD/
         │
         └── accepted rows only. Rejected rows go to
             quarantine/<feed>/event_date=YYYY-MM-DD/rejected.parquet
-            with a _reject_reason column.
+            with a _reject_reason column and the pre-cast source values
+            as _src_<column>.
 ```
 
 ## Transform layer
@@ -50,8 +51,11 @@ backfill is the idempotency demonstration.
 
 ## Invariants
 
-1. **One partition, one file, one manifest.** No partial directory states.
-2. **Writes are atomic.** Every file is written to a `.tmp` sibling and renamed.
+1. **One partition, one file, one manifest.** Each file is atomic; the pair is
+   reconciled after write. A crash between the two renames leaves a mismatched
+   pair, which a rerun repairs.
+2. **Each file write is atomic.** Every file is written to a `.tmp` sibling and
+   renamed. The part file and manifest are not a single transaction.
 3. **The manifest is deterministic.** It contains no wall-clock timestamp, so a
    rerun is byte-identical.
 4. **Row accounting balances.** `rows_in == rows_committed + rows_rejected`.

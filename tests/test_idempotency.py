@@ -8,7 +8,7 @@ from pathlib import Path
 
 import polars as pl
 
-from ingest.writer import fingerprint
+from ingest.writer import fingerprint, reconcile
 from tests.helpers import (
     FIXTURE_INBOX,
     SNAPSHOT,
@@ -56,6 +56,20 @@ def test_manifest_contains_no_wall_clock_time(contracts, inbox, data):
     # appear in it. Provenance belongs to the orchestrator, not the data.
     assert b"ingested_at" not in manifest
     assert b"2026-10" not in manifest
+
+
+def test_rerun_repairs_a_pair_left_by_an_interrupted_write(contracts, inbox, data):
+    ingest_baseline(contracts, inbox, data)
+    directory = partition(data, "transactions", TX_DAY)
+    manifest_path = directory / "_manifest.json"
+    manifest_path.write_text('{"rows_committed": 0}\n', encoding="utf-8")
+
+    ingest_baseline(contracts, inbox, data)
+
+    manifest = json.loads(manifest_path.read_text())
+    committed = pl.read_parquet(directory / "part-00000.parquet")
+    assert manifest["rows_committed"] == committed.height
+    reconcile(directory / "part-00000.parquet", manifest, ("transaction_id",))
 
 
 def test_manifest_source_is_relative_to_the_inbox(contracts, data, tmp_path):

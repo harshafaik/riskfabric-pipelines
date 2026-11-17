@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from datetime import date
 
-import duckdb
 import pytest
-from dagster import materialize
+
+duckdb = pytest.importorskip("duckdb")
+dagster = pytest.importorskip("dagster")
+materialize = dagster.materialize
 
 from orchestration.definitions import (
     PipelinePaths,

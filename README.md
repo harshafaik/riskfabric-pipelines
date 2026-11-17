@@ -1,14 +1,32 @@
 # riskfabric-pipelines
 
+[![CI](https://github.com/harshafaik/riskfabric-pipelines/actions/workflows/ci.yml/badge.svg)](https://github.com/harshafaik/riskfabric-pipelines/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+`nsrdb` proves scale and distribution. This repository proves correctness at the
+boundary: every row is validated against a versioned contract, every partition is a
+deterministic function of its input, and every load is reconciled after write.
+
 Contract-validated ingestion, idempotent partition loads and reconciliation over a
 deterministic synthetic transaction feed.
 
 This repository is the data-engineering half of a three-part system:
 
 ```
-scrip  ──dataset v1──▶  riskfabric-pipelines  ──analytical tables──▶  RiskFabric
+scrip  ──dataset v1──▶  riskfabric-pipelines  ──analytical tables──▶  riskfabric-ml
 (simulation)            (this repo)                                  (model + serving)
 ```
+
+| Repository | Responsibility |
+| :--- | :--- |
+| `scrip` | OpenStreetMap world building and deterministic agent simulation |
+| **riskfabric-pipelines** (this repository) | Contract-validated ingestion, star schema, orchestration |
+| [`riskfabric-ml`](https://github.com/harshafaik/riskfabric-ml) | Feature engineering, training, calibration, scoring, monitoring, case review |
+| [`RiskFabric`](https://github.com/harshafaik/RiskFabric) (archived) | Original end-to-end monolith |
+
+[`nsrdb`](https://github.com/harshafaik/nsrdb) carries the scale and distribution story.
+`scrip` is the seeded Rust generator that produced `fixtures/inbox`; its provenance is
+recorded in [`fixtures/README.md`](fixtures/README.md#provenance).
 
 It does not train models. It ends at curated, validated tables.
 
@@ -23,7 +41,7 @@ freshness check, daily schedule).
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
+pip install -e ".[dev,transform,orchestrate]"
 
 # Ingest the full 30-day fixture. Dimensions are ordered before facts:
 # the customer snapshot lands first, then each daily transaction file.
@@ -35,17 +53,20 @@ python -m ingest run --feed all --from 2026-01-01 --to 2026-01-30
 python -m ingest run --feed customers --date 2026-01-01
 python -m ingest run --feed transactions --date 2026-01-15
 
-# Run the tests
+# Run the tests.
 pytest
 
 # Transform bronze into the star schema (DuckDB).
-pip install -e ".[dev,transform,orchestrate]"
 dbt build --profiles-dir .
 dbt docs generate --profiles-dir . && dbt docs serve --profiles-dir .
 
 # Orchestrate the same assets, partitioned by day.
 dagster dev -f orchestration/definitions.py
 ```
+
+The three extras give one path through ingest, tests, transforms and orchestration.
+Ingest alone needs only the base install; `pytest` skips the dbt and Dagster tests
+when their extras are absent.
 
 Output:
 
@@ -55,6 +76,28 @@ Output:
 2026-01-02  customers     skipped (no snapshot)
 2026-01-02  transactions  committed  in=264   ok=264   rejected=0   sha256:a234c096...
 ```
+
+## Verify it yourself
+
+```bash
+rm -rf /tmp/rfp
+
+# 1. Two runs over the same inbox produce byte-identical output.
+python -m ingest run --feed all --from 2026-01-01 --to 2026-01-30 --data /tmp/rfp/data
+find /tmp/rfp/data -type f | sort | xargs sha256sum > /tmp/rfp/first.sha
+python -m ingest run --feed all --from 2026-01-01 --to 2026-01-30 --data /tmp/rfp/data
+sha256sum -c /tmp/rfp/first.sha --quiet && echo "62 files identical"
+
+# 2. The suite covers boundary cases, late-arrival replay and the dbt models.
+pytest
+
+# 3. The transform builds and tests the star schema.
+RFP_DUCKDB=/tmp/rfp/riskfabric.duckdb \
+  dbt build --profiles-dir . --vars '{bronze_root: /tmp/rfp/data/bronze}'
+```
+
+Expected: `62 files identical`, a green pytest run, and `PASS=53` from dbt
+(46 data tests plus 7 models).
 
 ## What makes this more than a copy job
 
@@ -77,19 +120,14 @@ references:
 file and write nothing. Type and semantic failures reject individual rows into
 `data/quarantine/<feed>/event_date=.../rejected.parquet` with a reason
 (`type:amount`, `ref:customer_id`, `duplicate:primary_key`, `partition_mismatch`),
-so one bad row does not block 270 good ones.
+with the pre-cast source values kept as `_src_<column>`, so one bad row does not
+block 270 good ones.
 
 **Idempotency, proven.** A partition is a pure function of its input: rerunning the
 same day produces byte-identical Parquet and manifest. There is no wall-clock
 timestamp in the manifest, because provenance belongs to the orchestrator and
-determinism belongs to the data.
-
-```
-$ find data -type f | sort | xargs sha256sum > /tmp/first.sha
-$ python -m ingest run --feed all --from 2026-01-01 --to 2026-01-30
-$ sha256sum -c /tmp/first.sha --quiet && echo identical
-identical
-```
+determinism belongs to the data. The [verify block](#verify-it-yourself) replays the
+full 30-day window and compares every output byte.
 
 **Reconciliation, not hope.** After writing, the partition is read back and its
 row count, column list and content fingerprint are compared against the manifest.
@@ -118,7 +156,8 @@ fixtures/inbox/       31 committed partitions generated by scrip (seed 42)
 tests/                pytest suite plus dbt singular tests
 dbt_project.yml       transform project (bronze_root var, materializations)
 profiles.yml          DuckDB profile (data/riskfabric.duckdb)
-docs/                 architecture, theory, components, decisions, performance
+docs/                 architecture, theory, failure modes, components,
+                      decisions, performance
 ```
 
 ## Transforms
@@ -149,7 +188,8 @@ asset model. Airflow's task/DAG model fits a fixed monthly rebuild sequence; the
 partition, each runs with `retry_policy(max_retries=2)`, the ingest manifest is
 emitted as materialization metadata, and one asset check fails when bronze has
 not caught up with the latest delivered partition. Backfilling a single day in
-the UI is the idempotency demo.
+the UI is the idempotency demo; materialize the `2026-01-01` customer snapshot
+first, because every transaction partition references the customer feed.
 
 ```bash
 dagster dev -f orchestration/definitions.py
@@ -179,6 +219,7 @@ data/bronze/transactions/event_date=2026-01-15/
 - [`docs/index.md`](docs/index.md) — the documentation index
 - [`docs/architecture.md`](docs/architecture.md) — data flow and invariants
 - [`docs/theory_of_operation.md`](docs/theory_of_operation.md) — what a partition is and what is guaranteed
+- [`docs/failure-modes.md`](docs/failure-modes.md) — what happens when each thing breaks
 - [`docs/components/`](docs/components/index.md) — one document per module
 - [`docs/decisions/`](docs/decisions_index.md) — choices, incidents and rejected alternatives
 - [`docs/performance.md`](docs/performance.md) — measured timings and query latencies

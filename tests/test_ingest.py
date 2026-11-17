@@ -122,6 +122,24 @@ def test_type_errors_are_quarantined_with_reasons(contracts, inbox, data):
     assert any("type:timestamp" in reason for reason in reasons)
 
 
+def test_type_failure_quarantine_preserves_the_raw_value(contracts, inbox, data):
+    ingest(contracts, "customers", SNAPSHOT, inbox, data)
+
+    def corrupt(frame: pl.DataFrame) -> pl.DataFrame:
+        frame = frame.with_columns(pl.col("amount").cast(pl.String))
+        return set_value(frame, "amount", 0, "not-a-number")
+
+    rewrite(inbox, TX_DAY, corrupt)
+    ingest(contracts, "transactions", TX_DAY, inbox, data)
+
+    rejected = pl.read_parquet(quarantine(data, "transactions", TX_DAY) / "rejected.parquet")
+    committed = pl.read_parquet(partition(data, "transactions", TX_DAY) / "part-00000.parquet")
+
+    assert rejected["amount"].to_list() == [None]
+    assert rejected["_src_amount"].to_list() == ["not-a-number"]
+    assert not [name for name in committed.columns if name.startswith("_src_")]
+
+
 def test_orphan_reference_is_quarantined(contracts, inbox, data):
     ingest(contracts, "customers", SNAPSHOT, inbox, data)
     rewrite(inbox, TX_DAY, lambda frame: set_value(frame, "customer_id", 0, "ghost"))

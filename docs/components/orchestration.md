@@ -70,6 +70,11 @@ The partition window is fixed at import time. Extending it requires setting
 `RFP_PARTITION_END` before the definitions load; the asset graph does not grow with new
 deliveries on its own.
 
+The customer snapshot is periodic but modeled on the daily partition definition. A single-day
+backfill of a transaction partition on a fresh data root runs an empty customer partition and
+then fails the reference check; materialize the `2026-01-01` snapshot first. A non-partitioned
+snapshot asset would remove the ordering trap.
+
 The schedule exists but nothing runs it. There is no deployed daemon, no `DAGSTER_HOME`, and no
 run history beyond local executions, so the claim is an orchestrator definition rather than a
 running service.

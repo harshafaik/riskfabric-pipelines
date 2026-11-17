@@ -213,8 +213,18 @@ def validate_rows(
         .then(pl.lit(None, dtype=pl.String))
         .otherwise(reason_column)
         .alias("_reject_reason")
-    ).drop([_source(column.name) for column in contract.columns])
+    )
 
-    rejected = frame.filter(pl.col("_reject_reason").is_not_null())
-    accepted = frame.filter(pl.col("_reject_reason").is_null()).drop("_reject_reason")
+    source_columns = [_source(column.name) for column in contract.columns]
+    accepted = (
+        frame.filter(pl.col("_reject_reason").is_null())
+        .drop("_reject_reason")
+        .drop(source_columns)
+    )
+    rejected = frame.filter(pl.col("_reject_reason").is_not_null()).rename(
+        {
+            source: f"_src_{column.name}"
+            for source, column in zip(source_columns, contract.columns)
+        }
+    )
     return ValidationResult(accepted=accepted, rejected=rejected)

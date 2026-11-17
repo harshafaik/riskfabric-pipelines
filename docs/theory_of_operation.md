@@ -34,16 +34,18 @@ and a structural failure cannot leave a partially validated file on disk.
 
 A bad row should not cost the partition. On the 2026-01-15 fixture, a single unparseable
 `amount` sends one row to quarantine and commits the other `243`. Rejected rows retain every
-original column plus `_reject_reason`; multiple reasons are joined with `; ` so a row that is
-both out of range and an orphan is diagnosed in one read.
+original column, the pre-cast source values as `_src_<column>`, and `_reject_reason`; a failed
+cast stays inspectable instead of collapsing to null. Multiple reasons are joined with `; ` so a
+row that is both out of range and an orphan is diagnosed in one read.
 
 Duplicate primary keys reject every copy, not the second one. Keeping the first copy would make
 the committed set depend on row order, which contradicts Section 1.
 
 ## 4. The partition is the unit of replacement
 
-A late correction rewrites the whole day. The new file and manifest replace the old ones
-atomically, the fingerprint changes, and the neighbouring day is untouched. A row whose
+A late correction rewrites the whole day. Each file is replaced atomically and the pair is
+reconciled after both writes; a crash between the two renames can leave a mismatched pair, which
+the next replay repairs. The fingerprint changes, and the neighbouring day is untouched. A row whose
 timestamp belongs to another day is quarantined as `partition_mismatch` rather than rerouted,
 so the partition remains a function of the contract and the requested date. The replay
 behaviour is demonstrated in `tests/test_late_arrival.py` and discussed in
@@ -87,7 +89,7 @@ and retry, not semantics.
 | Invariant | Guard |
 | :--- | :--- |
 | One partition, one file, one manifest | `writer.py` fixed filenames; `reconcile` |
-| Writes are atomic | `_atomic` temp file plus `os.replace` |
+| Each file write is atomic | `_atomic` temp file plus `os.replace`; the pair is reconciled, not transactionally replaced |
 | Manifest is deterministic | sorted JSON, no wall clock; CI byte-identity step |
 | Row accounting balances | assertion in `pipeline.ingest_partition` |
 | A partition is a pure function of its input | idempotency test; CI full-feed rerun |

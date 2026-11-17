@@ -1,8 +1,10 @@
 # TASKS — finish this repo, then stop
 
-Status (2026-10-29): ingestion, the SQL layer, the late-arrival demo and Dagster
-orchestration are done; the repo is published and CI is green. What remains is item 6
-(the README cross-links).
+Status (2026-11-17): the repository close-out is complete. Ingestion, the SQL layer,
+the late-arrival demo and Dagster orchestration are done; the repo is published, CI
+is green, and the README carries the positioning, cross-links and verify block. The
+only external dependency is publishing `scrip` so its link can replace the current
+provenance pointer. Do not keep growing this repo.
 
 **Definition of done.** When all six items below are true, this repo is finished as a
 portfolio piece. Do not keep growing it after that; the next marginal hour belongs to
@@ -109,7 +111,11 @@ partitions that must each be fresh and re-runnable. Stating that trade-off is th
 
 **Acceptance:** four weeks of green daily runs, and a screenshot of the partition matrix.
 
-## 6. README — P2, ~1 hour
+## 6. README — P2, done
+
+Done 2026-11-17: the README opens with the `nsrdb` contrast, links `RiskFabric` and
+`nsrdb`, and includes a verify block. The `scrip` GitHub link stays pending until that
+repository is published; the provenance pointer goes to `fixtures/README.md#provenance`.
 
 - First two lines: what question this answers that `nsrdb` does not.
 - Link `scrip`, `nsrdb` and `RiskFabric` — all four directions, not just this one.

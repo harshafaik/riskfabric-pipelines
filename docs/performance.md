@@ -36,7 +36,7 @@ single-machine; no concurrency is measured.
 | :--- | :--- |
 | Full ingest, 30 days | 0.64 ± 0.00 s |
 | Replay of the same 30 days | 0.64 ± 0.01 s |
-| `dbt build` (7 models, 53 checks) | 6.35 ± 0.10 s |
+| `dbt build` (7 models, 46 data tests, 53 nodes) | 6.35 ± 0.10 s |
 | Ingest throughput | ~14,200 rows/s |
 | Peak RSS, ingest | ~119 MiB |
 | Peak RSS, dbt | ~274 MiB |
@@ -62,8 +62,8 @@ Quarantine is not exercised in this measurement: the fixture validates cleanly, 
 
 `dbt build` measures `6.35 ± 0.10 s` wall time, of which about `1.2 s` is dbt's own model and
 test execution. The remaining roughly five seconds is process startup and adapter import, which
-is why the wall time is several times the reported run time. The build executes 7 models and 53
-data tests and passes all of them.
+is why the wall time is several times the reported run time. The build executes 7 models and 46
+data tests (53 nodes in total) and passes all of them.
 
 DuckDB query latency over the built marts:
 

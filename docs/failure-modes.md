@@ -19,6 +19,7 @@ test in `tests/` unless marked otherwise.
 | Too few valid rows | `min_rows` check | nothing written, previous partition preserved | 2 |
 | Written file ≠ manifest | read-back reconciliation | exception | 4 |
 | Interrupted write | temp file orphaned | target untouched; rerun overwrites temp | — |
+| Crash between part and manifest renames | new part file beside the old manifest | next run rewrites both and reconciles; `reconcile` cannot run after the crash | — |
 
 ## The cases worth explaining
 
@@ -44,6 +45,12 @@ and would hide an upstream delivery bug.
 land as expected.** The partition is reopened and hashed after writing. If the row
 count, column list or fingerprint disagrees with the manifest, the run fails
 instead of reporting success.
+
+**Atomic files are not a transactional partition.** `part-00000.parquet` and
+`_manifest.json` are each replaced atomically, but they are two renames. A process
+killed between them leaves new data beside the old manifest; `reconcile` does not
+run because the process died. The next run overwrites both and proves the pair
+again. The guarantee is recoverability, not a cross-file transaction.
 
 ## Known gaps
 

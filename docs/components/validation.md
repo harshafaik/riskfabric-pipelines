@@ -4,7 +4,8 @@
 
 `ingest/validation.py` splits a source frame into accepted and rejected rows. It consumes a
 `pl.DataFrame`, the feed's `Contract`, the requested partition and the referenced id sets, and
-produces a `ValidationResult` whose rejected frame carries a `_reject_reason` column. Structure
+produces a `ValidationResult` whose rejected frame carries a `_reject_reason` column and the
+pre-cast source values as `_src_<column>`. Structure
 failures reject the whole file; type and semantic failures reject individual rows.
 
 ## Schema
@@ -14,7 +15,7 @@ failures reject the whole file; type and semantic failures reject individual row
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `accepted` | `pl.DataFrame` | Rows with contract types and a partition column, ready for bronze. |
-| `rejected` | `pl.DataFrame` | Rows with contract types, the partition column and `_reject_reason`. |
+| `rejected` | `pl.DataFrame` | Rows with contract types, the partition column, `_reject_reason` and `_src_<column>` pre-cast values. |
 
 ## API
 
@@ -30,13 +31,15 @@ failures reject the whole file; type and semantic failures reject individual row
 unexpected column or an empty file raises before any write, so the previous good partition is
 preserved. A bad amount or timestamp sends one row to
 `quarantine/transactions/event_date=YYYY-MM-DD/rejected.parquet` and commits the rest. On the
-2026-01-15 fixture this is the difference between writing nothing and committing `244` rows.
+2026-01-15 fixture this is the difference between writing nothing and committing `243` rows.
 
 **Type checks compare the source value with the cast value.** Every column is copied to a
 hidden `__src__<name>` column before casting. A failed cast is then reported once as
 `type:<column>` rather than twice, once as a type error and once as a nullability violation.
-String columns whose source dtype is not string are additionally rejected, because a numeric
-value silently cast to text would otherwise pass.
+Rejected rows expose those pre-cast values as `_src_<column>`, so a failed cast remains
+inspectable instead of appearing only as a null in the typed column. String columns whose source
+dtype is not string are additionally rejected, because a numeric value silently cast to text
+would otherwise pass.
 
 **Semantic checks run on the cast value; nullability runs on the source value.** Allowed
 values, ranges and patterns test the typed column. Nullability tests `__src__`, so a value

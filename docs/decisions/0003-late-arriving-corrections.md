@@ -8,10 +8,10 @@ duplicating rows, without touching other days, and without losing the reason a r
 
 ## Decision
 
-The partition is the unit of replacement. Re-ingesting `(feed, event_date)` atomically rewrites
-`part-00000.parquet` and `_manifest.json`, replaces any `rejected.parquet`, and leaves every
-other partition untouched. A row dated for another day is quarantined as `partition_mismatch`
-rather than rerouted.
+The partition is the unit of replacement. Re-ingesting `(feed, event_date)` rewrites
+`part-00000.parquet` and `_manifest.json` (each file replaced atomically), replaces any
+`rejected.parquet`, and leaves every other partition untouched. A row dated for another day is
+quarantined as `partition_mismatch` rather than rerouted.
 
 ## Evidence
 
@@ -31,6 +31,10 @@ rather than rerouted.
 
 A correction rewrites the whole day. Cost is proportional to the day, not to the size of the
 diff, and the source must deliver the complete day rather than a patch.
+
+The part file and manifest are two separate atomic renames. A process killed between them leaves
+new data beside the old manifest; the next replay rewrites both and reconciles. The guarantee is
+a recoverable partition, not a cross-file transaction.
 
 `fact_transaction` is incremental with a three-day lookback. A correction to a day older than
 three days is not picked up by a normal incremental run; it needs a targeted `dbt run` or a full

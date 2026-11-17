@@ -25,12 +25,14 @@ and `REJECT_FILE` (`rejected.parquet`).
 ## Design Decisions
 
 **One partition is one file and one manifest.** A directory never contains a half-written part
-file or a manifest describing a different file. The fixed names make reconciliation and the
-quarantine path predictable without a catalog.
+file. The fixed names make reconciliation and the quarantine path predictable without a catalog.
+The part file and manifest are separate files, so a crash between their renames can leave a
+mismatched pair until the next run repairs it.
 
-**Every write is atomic.** `_atomic` writes to `.<name>.tmp` and calls `os.replace`, so a
-reader sees either the previous file or the new one. The temp file is created in the target
-directory, which keeps the rename on the same filesystem.
+**Each file write is atomic.** `_atomic` writes to `.<name>.tmp` and calls `os.replace`, so a
+reader sees either the previous version or the new version of that file. The temp file is created
+in the target directory, which keeps the rename on the same filesystem. The pair is reconciled
+after both writes, but it is not replaced transactionally.
 
 **The fingerprint is order-independent.** `fingerprint` sorts by the primary key and hashes the
 CSV serialization, so a shuffled frame with the same rows produces the same `sha256:`. This is
@@ -62,6 +64,11 @@ A per-partition lock file or an orchestrator-level concurrency limit would preve
 
 A process killed between `write` and `os.replace` leaves a `.<name>.tmp` file. It is harmless
 and overwritten on the next run, but nothing removes orphaned temp files proactively.
+
+A process killed between the part-file rename and the manifest rename leaves new data beside the
+old manifest. `reconcile` does not run in that case because the process is gone. The next run
+rewrites both files and reconciles the pair; the guarantee is recovery on rerun, not a cross-file
+transaction.
 
 Fingerprints are computed over CSV text. `write_csv` escapes separators and quotes, so collisions
 are not known to occur, but the hash is not a cryptographic commitment to the Parquet bytes.

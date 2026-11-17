@@ -4,7 +4,7 @@
 
 The dbt project (`dbt_project.yml`, `models/`) reads bronze Parquet from the `bronze_root` var
 and builds a star schema in DuckDB. It consumes `bronze/transactions` and `bronze/customers` and
-produces two staging views, four dimensions and one incremental fact, with 53 data tests. It
+produces two staging views, four dimensions and one incremental fact, with 46 data tests. It
 contains no ingestion logic.
 
 ## Schema
@@ -72,12 +72,13 @@ either directly with `dbt build --profiles-dir .` or by the `star_schema` Dagste
 
 ## Current Limitations
 
-The SCD2 change-detection branch is unexercised. The committed fixture contains one customer
-snapshot, so every customer produces exactly one current version. A test with two snapshots and
-a changed `state` is needed before the history path can be claimed as verified.
+The committed fixture contains one customer snapshot, so every customer produces exactly one
+version there. `tests/test_scd2.py` synthesizes a second snapshot with a changed `state` and
+`credit_score` and asserts two versions, the first version's `valid_to`, and the current flag.
+The fixture itself remains a single-snapshot slice.
 
 `star_schema` runs a full `dbt build` for every partition. The models are correct and
-idempotent, but a 30-day backfill executes all 53 tests 30 times. Partition-scoped model
+idempotent, but a 30-day backfill executes all 46 data tests 30 times. Partition-scoped model
 selection would reduce this.
 
 The fact carries natural keys rather than `customer_sk`, `card_sk` and `merchant_sk`.
